@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bill Breaker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #1f2328;
+    background: #f7f8fa;
+    min-height: 100vh;
+  }
+
+  a { color: #2563eb; }
+
+  /* ── Layout ── */
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+
+  /* ── Header ── */
+  header {
+    margin-bottom: 28px;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 18px;
+  }
+  header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #2563eb;
+    letter-spacing: -0.5px;
+  }
+  header p {
+    color: #57606a;
+    margin-top: 3px;
+    font-size: 0.95rem;
+  }
+
+  /* ── Sections ── */
+  .section { margin-bottom: 22px; }
+  .section-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #57606a;
+    margin-bottom: 8px;
+  }
+
+  /* ── Textarea ── */
+  #billInput {
+    width: 100%;
+    height: 180px;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    resize: vertical;
+    background: transparent;
+    color: #1f2328;
+    transition: border-color 0.15s;
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+  }
+  #billInput:focus { outline: none; border-color: #1a6bb5; box-shadow: 0 0 0 3px rgba(26,107,181,0.12); }
+  #billInput::placeholder { color: transparent; }
+
+  /* ── Toolbar row ── */
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  /* ── Sample row ── */
+  .sample-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .sample-row-label {
+    font-size: 0.82rem;
+    color: #57606a;
+    white-space: nowrap;
+  }
+
+  /* ── Buttons (base) ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 14px;
+    min-height: 44px;
+    border-radius: 5px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.12s, border-color 0.12s;
+    white-space: nowrap;
+    line-height: 1.4;
+  }
+  /* visible focus outline for all buttons */
+  .btn:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+  .btn-ghost {
+    background: #fff;
+    border-color: #d0d7de;
+    color: #24292f;
+  }
+  .btn-ghost:hover { background: #f3f4f6; border-color: #b0b7c0; }
+
+  .btn-sample {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #2563eb;
+  }
+  .btn-sample:hover { background: #dbeafe; }
+
+  .btn-primary {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+    padding: 9px 22px;
+    font-size: 0.95rem;
+  }
+  .btn-primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
+  .btn-primary:disabled {
+    background: #93c5fd;
+    border-color: #93c5fd;
+    cursor: default;
+  }
+
+  .btn-action {
+    background: #fff;
+    border-color: #d0d7de;
+    color: #24292f;
+    font-size: 0.82rem;
+    padding: 5px 11px;
+    min-height: 36px;
+  }
+  .btn-action:hover { background: #f3f4f6; }
+
+  .btn-action.copied { color: #1a7f37; border-color: #1a7f37; }
+
+  .btn-startover {
+    background: none;
+    border: none;
+    color: #57606a;
+    font-size: 0.83rem;
+    padding: 0;
+    cursor: pointer;
+    min-height: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .btn-startover:hover { color: #1f2328; }
+  .btn-startover:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; border-radius: 2px; }
+
+  /* ── Checkbox row ── */
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .check-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #2563eb;
+    cursor: pointer;
+  }
+  .check-row input[type="checkbox"]:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  /* ── Find errors row ── */
+  .find-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  /* ── Optional info fields ── */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  @media (max-width: 480px) { .info-grid { grid-template-columns: 1fr; } }
+  .info-field { display: flex; flex-direction: column; gap: 3px; }
+  .info-field label { font-size: 0.8rem; color: #57606a; font-weight: 500; }
+  .info-field input {
+    border: 1px solid #d0d7de;
+    border-radius: 5px;
+    padding: 6px 10px;
+    font-size: 0.875rem;
+    background: #fff;
+    color: #1f2328;
+    min-height: 44px;
+  }
+  .info-field input::placeholder { color: #b6bec8; }
+  .info-field input:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 0;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+  }
+  .info-field input:focus { outline: none; border-color: #2563eb; }
+
+  /* ── Divider ── */
+  .divider { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
+
+  /* ── Overcharge banner ── */
+  #overchargeBanner {
+    background: #fff5f5;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  #overchargeBanner .oc-amount {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #dc2626;
+    letter-spacing: -2px;
+    line-height: 1.1;
+  }
+  #overchargeBanner .oc-label {
+    font-size: 0.85rem;
+    color: #7f1d1d;
+    margin-top: 2px;
+  }
+  #overchargeBanner.clean {
+    background: #f0fdf4;
+    border-color: #86efac;
+  }
+  #overchargeBanner.clean .oc-amount { color: #166534; font-size: 1.2rem; }
+  #overchargeBanner.clean .oc-label { color: #166534; }
+  #overchargeBanner.unreadable {
+    background: #f7f8fa;
+    border-color: #d0d7de;
+  }
+  #overchargeBanner.unreadable .oc-amount { color: #57606a; font-size: 1.1rem; }
+  #overchargeBanner.unreadable .oc-label { color: #57606a; }
+
+  /* ── Issue cards ── */
+  .card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .card-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .badge-high { background: #fee2e2; color: #991b1b; }
+  .badge-medium { background: #fef3c7; color: #92400e; }
+  .badge-low { background: #e0f2fe; color: #075985; }
+
+  .card-lines {
+    font-size: 0.82rem;
+    color: #57606a;
+    margin-bottom: 6px;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    background: #f7f8fa;
+    border-radius: 4px;
+    padding: 5px 8px;
+    overflow-wrap: anywhere;
+  }
+  .card-reason { font-size: 0.875rem; color: #1f2328; margin-bottom: 6px; }
+  .card-amount { font-size: 0.875rem; font-weight: 600; color: #dc2626; }
+
+  /* ── Clean state ── */
+  .clean-tips { margin-top: 10px; }
+  .clean-tips h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; }
+  .clean-tips ul { padding-left: 20px; font-size: 0.875rem; color: #57606a; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 16px; gap: 0; }
+  .tab-btn {
+    padding: 9px 18px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #57606a;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.12s, border-color 0.12s;
+  }
+  .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+  .tab-btn:hover:not(.active) { color: #1f2328; }
+  .tab-btn:focus-visible { outline: 2px solid #2563eb; outline-offset: -2px; border-radius: 3px; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Output text ── */
+  .output-text {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 16px 18px;
+    font-size: 0.875rem;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    color: #1f2328;
+    max-height: 420px;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+  }
+
+  .output-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  /* ── Hidden file input ── */
+  #csvFile { display: none; }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    font-size: 0.78rem;
+    color: #8c959f;
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 540px) {
+    header h1 { font-size: 1.4rem; }
+    .info-grid { grid-template-columns: 1fr; }
+    #overchargeBanner .oc-amount { font-size: 1.5rem; }
+    /* Stack sample row vertically at phone width */
+    .sample-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .sample-row-label { margin-bottom: 2px; }
+    .sample-row .btn-sample {
+      width: 100%;
+      justify-content: center;
+    }
+    /* Stack checkbox + find-errors button vertically */
+    .find-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .find-row > div {
+      width: 100%;
+    }
+    .find-row .btn-primary {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  /* ── Print styles ── */
+  @media print {
+    body { background: #fff; }
+    .page { padding: 0; max-width: 100%; }
+    header, .section, .find-row, #skipNote,
+    #overchargeBanner, #issueCards, .tabs,
+    .output-actions, .btn-startover-row,
+    .divider, footer { display: none !important; }
+    .tab-panel { display: block !important; }
+    .output-text {
+      border: none;
+      max-height: none;
+      padding: 0;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    /* Hide personalisation fields in print — they're part of .section but be explicit */
+    #outputSection .section { display: none !important; }
+  }
+
+  /* ── Drop zone ── */
+  #dropZone {
+    position: relative;
+    border: 2px dashed #d0d7de;
+    border-radius: 8px;
+    transition: border-color 0.15s, background 0.15s;
+    background: #fff;
+  }
+  #dropZone.drag-over {
+    border-color: #2563eb;
+    background: #eff6ff;
+  }
+  #dropZone.drag-over #dropHint { color: #2563eb; }
+  #dropHint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+    transition: color 0.15s;
+    width: 100%;
+    padding: 0 16px;
+  }
+  #dropHint .drop-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    margin-bottom: 6px;
+    color: #b6bec8;
+    display: block;
+  }
+  #dropHint .drop-main {
+    font-size: 0.9rem;
+    color: #57606a;
+    font-weight: 500;
+    display: block;
+  }
+  #dropHint .drop-sub {
+    font-size: 0.78rem;
+    color: #b6bec8;
+    margin-top: 3px;
+    display: block;
+  }
+  #dropZone.drag-over #dropHint .drop-main { color: #2563eb; }
+  #dropZone.drag-over #dropHint .drop-icon { color: #2563eb; }
+  /* hide hint when textarea has content */
+  #dropZone.has-content #dropHint { display: none; }
+  #dropZone #billInput {
+    /* remove its own border — the drop zone provides it */
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+  }
+  #dropZone #billInput:focus {
+    outline: none;
+    box-shadow: none;
+  }
+  /* Keyboard focus on the textarea itself gets a ring on the drop zone */
+  #dropZone:focus-within {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+  }
+  #pdfStatus {
+    font-size: 0.83rem;
+    color: #57606a;
+    margin-top: 6px;
+    min-height: 1.2em;
+  }
+  #pdfStatus.error { color: #dc2626; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header>
+    <h1>Bill Breaker</h1>
+    <p>Drop in your medical bill. We'll find likely errors and help you dispute them.</p>
+  </header>
+
+  <!-- Input section -->
+  <div class="section">
+    <div class="section-label">Your bill</div>
+    <div id="dropZone">
+      <span id="dropHint">
+        <span class="drop-icon">&#8613;</span>
+        <span class="drop-main">Drop a PDF here, or paste your bill</span>
+        <span class="drop-sub">Works with PDFs, CSVs, and copied text</span>
+      </span>
+      <textarea id="billInput" placeholder=" "></textarea>
+    </div>
+    <div id="pdfStatus"></div>
+
+    <div class="toolbar">
+      <button class="btn btn-ghost" onclick="document.getElementById('fileInput').click()">
+        &#8593; Choose file
+      </button>
+      <input type="file" id="fileInput" accept=".pdf,.csv,.txt" style="display:none" onchange="handleFileInput(this)">
+    </div>
+
+    <div class="sample-row">
+      <span class="sample-row-label">No bill handy? Try a sample:</span>
+      <button class="btn btn-sample" onclick="loadSample('er')">ER visit</button>
+      <button class="btn btn-sample" onclick="loadSample('lab')">Lab work</button>
+      <button class="btn btn-sample" onclick="loadSample('denial')">Insurance denial</button>
+    </div>
+  </div>
+
+  <!-- In-network + Find errors -->
+  <div class="find-row">
+    <label class="check-row">
+      <input type="checkbox" id="inNetwork" checked>
+      In-network provider
+    </label>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="findBtn" onclick="runAnalysis()">Find errors</button>
+      <span id="inputHint" style="display:none;font-size:0.85rem;color:#57606a;"></span>
+    </div>
+  </div>
+  <div id="skipNote" style="display:none;font-size:0.83rem;color:#57606a;margin-top:6px;"></div>
+
+  <!-- Results (hidden until analysis) -->
+  <div id="results" style="display:none;">
+    <hr class="divider">
+    <div class="btn-startover-row" style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button class="btn btn-startover" onclick="startOver()">↩ Start over</button>
+    </div>
+
+    <!-- Overcharge banner -->
+    <div id="overchargeBanner">
+      <div id="ocAmount" class="oc-amount"></div>
+      <div id="ocLabel" class="oc-label"></div>
+      <div id="ocEstNote" style="display:none;font-size:0.78rem;color:#57606a;margin-top:3px;"></div>
+      <div id="cleanTips" class="clean-tips" style="display:none;">
+        <h4>Your bill looks clean — but here are some tips to make sure:</h4>
+        <ul>
+          <li>Request a fully itemized bill with CPT codes for every line.</li>
+          <li>Ask your insurer for the Explanation of Benefits (EOB) and compare it line by line.</li>
+          <li>Confirm your provider was in-network on your date of service.</li>
+          <li>Check that all services listed were actually received.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Issue cards -->
+    <div id="issueCards"></div>
+
+    <!-- Letter & Script -->
+    <div id="outputSection" style="display:none;">
+      <!-- Personalisation fields (moved here from landing screen) -->
+      <div class="section" style="margin-bottom:18px;">
+        <div class="section-label">Personalize your letter <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.78rem;">(optional)</span></div>
+        <div class="info-grid">
+          <div class="info-field">
+            <label for="patientName">Your name</label>
+            <input type="text" id="patientName" placeholder="Jane Smith" oninput="liveRefreshOutputs()">
+          </div>
+          <div class="info-field">
+            <label for="accountNumber">Account number</label>
+            <input type="text" id="accountNumber" placeholder="123456789" oninput="liveRefreshOutputs()">
+          </div>
+          <div class="info-field">
+            <label for="providerName">Provider / hospital name</label>
+            <input type="text" id="providerName" placeholder="General Hospital" oninput="liveRefreshOutputs()">
+          </div>
+          <div class="info-field">
+            <label for="insurerName">Insurance company</label>
+            <input type="text" id="insurerName" placeholder="Blue Cross" oninput="liveRefreshOutputs()">
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('letter', this)">Dispute letter</button>
+        <button class="tab-btn" onclick="switchTab('script', this)">Phone script</button>
+      </div>
+      <div id="tabLetter" class="tab-panel active">
+        <div id="letterText" class="output-text"></div>
+        <div class="output-actions">
+          <button class="btn btn-action" id="copyLetter" onclick="copyOutput('letterText', 'copyLetter')">Copy</button>
+          <button class="btn btn-action" onclick="printOutput('letterText')">Print</button>
+        </div>
+      </div>
+      <div id="tabScript" class="tab-panel">
+        <div id="scriptText" class="output-text"></div>
+        <div class="output-actions">
+          <button class="btn btn-action" id="copyScript" onclick="copyOutput('scriptText', 'copyScript')">Copy</button>
+          <button class="btn btn-action" onclick="printOutput('scriptText')">Print</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Not legal or medical billing advice.</footer>
+</div>
+
+<script>
+let _lastFindings = [];
+
+// ─────────────────────────────────────────────
+// SAMPLE DATA
+// ─────────────────────────────────────────────
+const SAMPLES = {
+  er: `date,code,description,billed,adjustment,patient_owes
+2024-04-10,99284,Emergency dept visit – moderate-high complexity,$1450.00,$812.00,$362.50
+2024-04-10,99284,Emergency dept visit – moderate-high complexity,$1450.00,$812.00,$362.50
+2024-04-10,74177,CT abdomen & pelvis with contrast,$3360.00,$1680.00,$840.00
+2024-04-10,74177,CT abdomen & pelvis with contrast,$3360.00,$1680.00,$840.00
+2024-04-10,36415,Venipuncture / routine blood draw,$32.00,$8.00,$12.00
+2024-04-10,93010,Electrocardiogram (ECG) interpretation,$185.00,$0.00,$46.25`,
+
+  lab: `date,code,description,billed,adjustment,patient_owes
+2024-05-02,99213,Office visit – moderate complexity,$310.00,$0.00,$77.50
+2024-05-02,99214,Office visit – moderate-high complexity,$460.00,$0.00,$115.00
+2024-05-02,80048,Basic metabolic panel,$112.00,$22.00,$22.50
+2024-05-02,80053,Comprehensive metabolic panel,$168.00,$34.00,$33.50
+2024-05-02,36415,Venipuncture / routine blood draw,$32.00,$6.00,$6.50
+2024-05-02,36415,Venipuncture / routine blood draw,$40.00,$8.00,$8.00
+2024-05-02,85025,Complete blood count with differential,$58.00,$12.00,$11.50`,
+
+  denial: `CO-50 – Denial: service not deemed medically necessary.
+Date of service: 2024-06-18
+Provider: Riverside Orthopedics
+Patient account: 7741239
+Procedure: 27447 – Total knee arthroplasty
+Amount billed: $18,450.00
+Amount denied: $2,340.00
+Patient responsibility: $2,200.00
+
+Please review the denial reason code above and contact your insurer to appeal.`
+};
+
+// ─────────────────────────────────────────────
+// LOAD HELPERS
+// ─────────────────────────────────────────────
+function loadSample(key) {
+  startOver(/* silent */ true);
+  setTextareaValue(SAMPLES[key]);
+  runAnalysis();
+}
+
+function handleFileInput(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  startOver(/* silent */ true);
+  if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
+    loadPDF(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => {
+      setTextareaValue(e.target.result);
+    };
+    reader.readAsText(file);
+  }
+}
+
+// ─────────────────────────────────────────────
+// PDF EXTRACTION
+// ─────────────────────────────────────────────
+
+// Initialise pdf.js worker once (deferred so the lib has loaded)
+function getPDFWorker() {
+  if (!window._pdfWorkerSet) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    window._pdfWorkerSet = true;
+  }
+}
+
+function setPDFStatus(msg, isError) {
+  const el = document.getElementById('pdfStatus');
+  el.textContent = msg;
+  el.className = isError ? 'error' : '';
+}
+
+async function loadPDF(file) {
+  getPDFWorker();
+  setPDFStatus('Reading your PDF…');
+
+  let arrayBuffer;
+  try {
+    arrayBuffer = await file.arrayBuffer();
+  } catch (e) {
+    setPDFStatus('Could not read the file. Please try again.', true);
+    return;
+  }
+
+  let pdf;
+  try {
+    pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  } catch (e) {
+    setPDFStatus('Could not open the PDF. Make sure it is not password-protected.', true);
+    return;
+  }
+
+  let fullText = '';
+  let totalItems = 0;
+
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    totalItems += content.items.length;
+
+    // Group items by y position (within a 3-unit tolerance) to reconstruct lines
+    const rows = new Map();
+    for (const item of content.items) {
+      if (!item.str || !item.str.trim()) continue;
+      const y = Math.round(item.transform[5] / 3) * 3; // bucket to nearest 3pt
+      if (!rows.has(y)) rows.set(y, []);
+      rows.get(y).push({ x: item.transform[4], str: item.str });
+    }
+
+    // Sort rows top-to-bottom (descending y in PDF coords = top of page first)
+    const sortedYs = [...rows.keys()].sort((a, b) => b - a);
+    for (const y of sortedYs) {
+      const lineItems = rows.get(y).sort((a, b) => a.x - b.x);
+      fullText += lineItems.map(i => i.str).join(' ') + '\n';
+    }
+  }
+
+  if (totalItems < 20) {
+    // Very few text items — almost certainly a scanned image
+    setPDFStatus(
+      'This looks like a scanned image. Try a PDF downloaded from your patient portal, or paste the charges as text.',
+      true
+    );
+    return;
+  }
+
+  setPDFStatus('');
+  setTextareaValue(fullText);
+  runAnalysis();
+}
+
+// Set textarea value and update the drop-zone hint visibility
+function setTextareaValue(text) {
+  const ta = document.getElementById('billInput');
+  const zone = document.getElementById('dropZone');
+  ta.value = text;
+  zone.classList.toggle('has-content', text.trim().length > 0);
+}
+
+// ─────────────────────────────────────────────
+// DROP ZONE WIRING
+// ─────────────────────────────────────────────
+function initDropZone() {
+  const zone = document.getElementById('dropZone');
+  const ta   = document.getElementById('billInput');
+
+  // Keep has-content class in sync as user types/pastes
+  ta.addEventListener('input', () => {
+    zone.classList.toggle('has-content', ta.value.trim().length > 0);
+  });
+
+  zone.addEventListener('dragenter', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', e => {
+    // Only remove when leaving the zone entirely (not entering a child)
+    if (!zone.contains(e.relatedTarget)) zone.classList.remove('drag-over');
+  });
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    setPDFStatus('');
+    if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
+      loadPDF(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = ev => { setTextareaValue(ev.target.result); };
+      reader.readAsText(file);
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initDropZone);
+
+// ─────────────────────────────────────────────
+// PARSING
+// ─────────────────────────────────────────────
+function parseAmount(s) {
+  if (s === undefined || s === null) return 0;
+  const n = parseFloat(String(s).replace(/[$,\s]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+function parseDate(s) {
+  if (!s) return '';
+  s = s.trim();
+  // common formats: YYYY-MM-DD, MM/DD/YYYY, MM-DD-YYYY, M/D/YY
+  const iso = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (iso) return `${iso[1]}-${iso[2].padStart(2,'0')}-${iso[3].padStart(2,'0')}`;
+  const mdy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (mdy) {
+    const yr = mdy[3].length === 2 ? '20' + mdy[3] : mdy[3];
+    return `${yr}-${mdy[1].padStart(2,'0')}-${mdy[2].padStart(2,'0')}`;
+  }
+  return s;
+}
+
+function parseCSVLine(line) {
+  const cols = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQ = !inQ; continue; }
+    if ((ch === ',' || ch === '\t') && !inQ) { cols.push(cur.trim()); cur = ''; }
+    else cur += ch;
+  }
+  cols.push(cur.trim());
+  return cols;
+}
+
+const KNOWN_COLS = ['date','code','description','billed','adjustment','patient_owes'];
+
+function parseBill(raw) {
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const items = [];
+  let idxMap = null;
+  let autoId = 0;
+  let skipped = 0;
+
+  // detect CSV vs free-text
+  // A genuine CSV line must have commas (or tabs) acting as field separators:
+  //   - splitting on comma/tab yields ≥3 columns, AND
+  //   - the first column looks like a date (MM/DD/YYYY etc.) or the second
+  //     column looks like a pure CPT/HCPCS code (5 digits or letter+4 digits).
+  // This prevents triggering on PDF lines that contain commas only inside
+  // descriptions ("Emergency dept visit, level 4") or dollar amounts ($1,450.00).
+  const looksLikeCSV = lines.some(l => {
+    if (!l.includes(',') && !l.includes('\t')) return false;
+    const cols = l.split(/,|\t/);
+    if (cols.length < 3) return false;
+    const c0 = cols[0].trim();
+    const c1 = cols[1].trim();
+    // First column is a date
+    if (/^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})$/.test(c0)) return true;
+    // Second column is a bare CPT/HCPCS code
+    if (/^([A-Z]\d{4}|\d{5})$/.test(c1)) return true;
+    return false;
+  });
+
+  if (!looksLikeCSV) {
+    // Try to parse PDF-extracted free-text lines before falling back to denial-only mode
+    const pdfItems = parsePDFLines(lines);
+    return { items: pdfItems, rawText: raw, skipped: 0 };
+  }
+
+  for (const line of lines) {
+    const cols = parseCSVLine(line);
+    // Blank lines and free-text sentences (no delimiter → <2 cols) are silently ignored,
+    // not counted as skipped — only data rows that have columns but no parseable code count.
+    if (!cols || cols.length < 2) continue;
+
+    // detect header row
+    if (!idxMap) {
+      const lower = cols.map(c => c.toLowerCase().replace(/[\s_]/g,''));
+      const isHeader = lower.some(c => ['date','code','description','billed'].includes(c));
+      if (isHeader) {
+        idxMap = {};
+        const aliases = {
+          date: ['date','dos','servicedate','dateofsvc'],
+          code: ['code','cpt','cptcode','hcpcs','proc','procedure'],
+          description: ['description','desc','service','servicedesc','name'],
+          billed: ['billed','charge','charges','amount','billedamount','total'],
+          adjustment: ['adjustment','adj','contractual','discount','write','writeoff'],
+          patient_owes: ['patientowes','owes','patientresponsibility','responsibility','due','patientamt','patientdue']
+        };
+        lower.forEach((c, i) => {
+          for (const [key, alts] of Object.entries(aliases)) {
+            if (alts.includes(c)) idxMap[key] = i;
+          }
+        });
+        continue;
+      }
+    }
+
+    if (!idxMap) {
+      // positional fallback: date, code, description, billed, adjustment, patient_owes
+      idxMap = { date:0, code:1, description:2, billed:3, adjustment:4, patient_owes:5 };
+    }
+
+    const get = key => cols[idxMap[key] ?? -1] ?? '';
+    const code = get('code').replace(/\s/g,'').toUpperCase();
+    if (!code) { skipped++; continue; }
+
+    items.push({
+      id: ++autoId,
+      date: parseDate(get('date')),
+      code,
+      description: get('description') || code,
+      billed: parseAmount(get('billed')),
+      adjustment: parseAmount(get('adjustment')),
+      patientOwes: parseAmount(get('patient_owes'))
+    });
+  }
+
+  return { items, rawText: raw, skipped };
+}
+
+// ─────────────────────────────────────────────
+// PDF LINE PARSER
+// Handles free-text lines extracted from PDFs.
+// A line qualifies as a charge if it contains:
+//   - a CPT/HCPCS code (5 digits OR 1 letter + 4 digits), AND
+//   - at least one dollar amount
+// ─────────────────────────────────────────────
+function parsePDFLines(lines) {
+  // ── Patterns ──
+
+  // Date: MM/DD/YYYY, YYYY-MM-DD, etc.
+  const DATE_RE = /\b(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})\b/;
+
+  // Positive amount: optional leading $, digits with optional comma grouping, cents required
+  const POS_AMOUNT_STR = '\\$?\\d{1,6}(?:,\\d{3})*\\.\\d{2}';
+  // Negative amount: (400.00)  |  -$400.00  |  -400.00
+  const NEG_AMOUNT_STR = '\\(\\d{1,6}(?:,\\d{3})*\\.\\d{2}\\)|-\\$?\\d{1,6}(?:,\\d{3})*\\.\\d{2}';
+  const ANY_AMOUNT_RE  = new RegExp(`(?:${NEG_AMOUNT_STR}|${POS_AMOUNT_STR})`, 'g');
+  // First-amount search (for slicing description)
+  const FIRST_AMOUNT_RE = new RegExp(`(?:${NEG_AMOUNT_STR}|${POS_AMOUNT_STR})`);
+
+  // CPT/HCPCS code: 5 digits OR 1 letter + 4 digits
+  // Fix 4: preceded by a blacklist context → not a code
+  // We test this after the basic match by checking what precedes it in the line.
+  const CODE_RE = /\b([A-Z]\d{4}|\d{5})\b/g;
+  // Words/tokens that, when immediately before a 5-digit number, mean it is NOT a CPT code
+  const CODE_BLACKLIST_RE =
+    /(?:account|acct|npi|phone|zip|claim|#|[A-Z]{2})\s*[:#\-]?\s*$/i;
+
+  // ── Helpers ──
+
+  // Parse a raw amount token, preserving sign (handles paren and minus forms)
+  function parseSignedAmount(tok) {
+    const neg = /^\(/.test(tok) || /^-/.test(tok);
+    // Strip sign characters, parens, $, and commas before calling parseFloat
+    const cleaned = tok.replace(/[()$,\s-]/g, '');
+    const val = parseFloat(cleaned);
+    if (isNaN(val)) return 0;
+    return neg ? -val : val;
+  }
+
+  // Extract all signed amount tokens from a line string
+  function extractAmounts(str) {
+    return [...str.matchAll(ANY_AMOUNT_RE)].map(m => parseSignedAmount(m[0]));
+  }
+
+  // Find the first (leftmost) code match not preceded by blacklist context
+  function findCode(line) {
+    let m;
+    CODE_RE.lastIndex = 0;
+    while ((m = CODE_RE.exec(line)) !== null) {
+      const before = line.slice(0, m.index);
+      if (!CODE_BLACKLIST_RE.test(before)) return m; // valid CPT/HCPCS match
+    }
+    return null;
+  }
+
+  // Map a list of signed amounts to { billed, adjustment, patientOwes, adjustmentUnknown }
+  function mapAmounts(amounts) {
+    const neg = amounts.filter(a => a < 0);
+    const pos = amounts.filter(a => a >= 0);
+
+    if (amounts.length === 1) {
+      return { billed: pos[0] ?? 0, adjustment: 0, patientOwes: pos[0] ?? 0, adjustmentUnknown: true };
+    }
+
+    if (amounts.length === 2) {
+      // If one is negative, it's the adjustment
+      if (neg.length === 1) {
+        return { billed: pos[0], adjustment: Math.abs(neg[0]), patientOwes: pos[1] ?? pos[0], adjustmentUnknown: false };
+      }
+      // Both positive: billed + patient_owes, adjustment unknown
+      return { billed: amounts[0], adjustment: 0, patientOwes: amounts[1], adjustmentUnknown: true };
+    }
+
+    if (amounts.length === 3) {
+      // Exactly 3: billed, adjustment (absolute), patient_owes
+      return {
+        billed:      Math.abs(amounts[0]),
+        adjustment:  Math.abs(amounts[1]),
+        patientOwes: Math.abs(amounts[2]),
+        adjustmentUnknown: false
+      };
+    }
+
+    // 4 or more: first = billed, last = patient_owes
+    // Use a negative amount as adjustment if present; otherwise unknown
+    const billed      = Math.abs(amounts[0]);
+    const patientOwes = Math.abs(amounts[amounts.length - 1]);
+    if (neg.length >= 1) {
+      return { billed, adjustment: Math.abs(neg[0]), patientOwes, adjustmentUnknown: false };
+    }
+    return { billed, adjustment: 0, patientOwes, adjustmentUnknown: true };
+  }
+
+  // ── Main pass ──
+  const items = [];
+  let autoId    = 0;
+  let lastDate  = '';       // carry-forward date (fix 3)
+  let pendingCodeLine = null; // for fix 5: code-only line awaiting amounts
+
+  for (const line of lines) {
+    // Always update the carry-forward date from any line
+    const dateMatch = line.match(DATE_RE);
+    if (dateMatch) lastDate = parseDate(dateMatch[0]);
+
+    const codeMatch = findCode(line);
+    const amounts   = extractAmounts(line);
+
+    // Fix 5: if this line has amounts but no code, and a pending code line exists → merge
+    if (!codeMatch && amounts.length > 0 && pendingCodeLine) {
+      const merged = pendingCodeLine + ' ' + line;
+      const mergedCode    = findCode(merged);
+      const mergedAmounts = extractAmounts(merged);
+      const mergedDate    = merged.match(DATE_RE);
+      const date = mergedDate ? parseDate(mergedDate[0]) : lastDate || '';
+
+      if (mergedCode && mergedAmounts.length > 0) {
+        const code = mergedCode[1].toUpperCase();
+        const firstIdx = merged.search(FIRST_AMOUNT_RE);
+        const before   = merged.slice(0, firstIdx);
+        const codeIdx  = before.indexOf(mergedCode[1]);
+        const rawDesc  = before.slice(codeIdx + mergedCode[1].length).trim();
+        const description = rawDesc.replace(/^[\s\-–:]+/, '').trim() || code;
+        items.push({ id: ++autoId, date, code, description, ...mapAmounts(mergedAmounts) });
+      }
+      pendingCodeLine = null;
+      continue;
+    }
+
+    // If this line has a code but no amounts → hold it as pending (fix 5)
+    if (codeMatch && amounts.length === 0) {
+      pendingCodeLine = line;
+      continue;
+    }
+
+    // Normal: code AND amounts on the same line
+    if (codeMatch && amounts.length > 0) {
+      pendingCodeLine = null; // clear any earlier pending (it had no amounts after all)
+
+      const code = codeMatch[1].toUpperCase();
+      const firstIdx = line.search(FIRST_AMOUNT_RE);
+      const before   = line.slice(0, firstIdx);
+      const codeIdx  = before.indexOf(codeMatch[1]);
+      const rawDesc  = before.slice(codeIdx + codeMatch[1].length).trim();
+      const description = rawDesc.replace(/^[\s\-–:]+/, '').trim() || code;
+
+      // Fix 3: use line date if present, else carry forward
+      const date = dateMatch ? parseDate(dateMatch[0]) : (lastDate || '');
+
+      const mapped = mapAmounts(amounts);
+      items.push({ id: ++autoId, date, code, description, ...mapped });
+      continue;
+    }
+
+    // Line with neither code nor amounts: clear pending only if it's clearly a new section
+    // (a non-empty, non-whitespace line that isn't an amount-only continuation)
+    if (!codeMatch && amounts.length === 0 && pendingCodeLine) {
+      // Keep pending — could still be followed by an amount line
+    }
+  }
+
+  return items;
+}
+
+// ─────────────────────────────────────────────
+// CPT CODE DESCRIPTIONS (for display)
+// ─────────────────────────────────────────────
+const CPT_DESC = {
+  '80048': 'Basic metabolic panel',
+  '80053': 'Comprehensive metabolic panel (includes 80048)',
+  '85025': 'Complete blood count with differential',
+  '85027': 'Complete blood count without differential (included in 85025)',
+  '36415': 'Venipuncture / routine blood draw',
+  '99211': 'Office visit – minimal complexity',
+  '99212': 'Office visit – low complexity',
+  '99213': 'Office visit – moderate complexity',
+  '99214': 'Office visit – moderate-high complexity',
+  '99215': 'Office visit – high complexity',
+  '99281': 'ED visit – minor',
+  '99282': 'ED visit – low complexity',
+  '99283': 'ED visit – moderate complexity',
+  '99284': 'ED visit – moderately high complexity',
+  '99285': 'ED visit – high complexity',
+};
+
+function codeLabel(code, description) {
+  const known = CPT_DESC[code];
+  const desc = description && description !== code ? description : (known || code);
+  return `${code} – ${desc}`;
+}
+
+// ─────────────────────────────────────────────
+// DETECTION RULES
+// Each returns an array of finding objects.
+// claimed[] tracks which item ids are already claimed to avoid double-counting.
+// ─────────────────────────────────────────────
+
+function detectDuplicates(items, claimed) {
+  const findings = [];
+  const seen = new Map();
+  for (const item of items) {
+    const key = `${item.date}|${item.code}|${item.billed}`;
+    if (!seen.has(key)) { seen.set(key, []); }
+    seen.get(key).push(item);
+  }
+  for (const [, group] of seen) {
+    if (group.length < 2) continue;
+    // first occurrence is legitimate; only the extras are claimed
+    const extras = group.slice(1).filter(i => !claimed.has(i.id));
+    if (!extras.length) continue;
+    extras.forEach(i => claimed.add(i.id));
+    const overcharge = extras.reduce((s, i) => s + i.patientOwes, 0);
+    findings.push({
+      rule: 'duplicate',
+      title: 'Duplicate charge',
+      severity: 'high',
+      lines: group,
+      reason: `The same code (${group[0].code}) was billed more than once on ${group[0].date} for the same amount — the extra charge is likely a billing error.`,
+      overcharge,
+      estimated: false
+    });
+  }
+  return findings;
+}
+
+const UNBUNDLE_PAIRS = [
+  { included: '80048', parent: '80053', note: '80048 (Basic metabolic panel) is already included in 80053 (Comprehensive metabolic panel) — billing both on the same day is unbundling.' },
+  { included: '85027', parent: '85025', note: '85027 (CBC without differential) is already included in 85025 (CBC with differential) — billing both on the same day is unbundling.' },
+];
+
+function detectUnbundling(items, claimed) {
+  const findings = [];
+  const byDateCode = new Map();
+  for (const item of items) {
+    const k = `${item.date}|${item.code}`;
+    byDateCode.set(k, item);
+  }
+  for (const pair of UNBUNDLE_PAIRS) {
+    // group by date
+    const dates = new Set(items.map(i => i.date));
+    for (const date of dates) {
+      const parentItem = byDateCode.get(`${date}|${pair.parent}`);
+      const includedItem = byDateCode.get(`${date}|${pair.included}`);
+      if (!parentItem || !includedItem) continue;
+      if (claimed.has(parentItem.id) || claimed.has(includedItem.id)) continue;
+      claimed.add(includedItem.id);
+      findings.push({
+        rule: 'unbundling',
+        title: 'Unbundled charges',
+        severity: 'high',
+        lines: [parentItem, includedItem],
+        reason: pair.note,
+        overcharge: includedItem.patientOwes,
+        estimated: false
+      });
+    }
+  }
+  return findings;
+}
+
+const EM_CODES = new Set(['99211','99212','99213','99214','99215']);
+
+function detectMultipleEM(items, claimed) {
+  const findings = [];
+  const byDate = new Map();
+  for (const item of items) {
+    if (!EM_CODES.has(item.code)) continue;
+    if (!byDate.has(item.date)) byDate.set(item.date, []);
+    byDate.get(item.date).push(item);
+  }
+  for (const [date, group] of byDate) {
+    if (group.length < 2) continue;
+    const unclaimed = group.filter(i => !claimed.has(i.id));
+    if (unclaimed.length < 2) continue;
+    // keep the highest-billed; extras are overcharges
+    unclaimed.sort((a, b) => b.billed - a.billed);
+    const extras = unclaimed.slice(1);
+    extras.forEach(i => claimed.add(i.id));
+    const overcharge = extras.reduce((s, i) => s + i.patientOwes, 0);
+    findings.push({
+      rule: 'multiple_em',
+      title: 'Multiple E/M visit charges same day',
+      severity: 'high',
+      lines: unclaimed,
+      reason: `Two or more evaluation & management visits (99211–99215) were billed on ${date}. Typically only one E/M visit per provider per day is allowed.`,
+      overcharge,
+      estimated: false
+    });
+  }
+  return findings;
+}
+
+function detectRepeatedVenipuncture(items, claimed) {
+  const findings = [];
+  const byDate = new Map();
+  for (const item of items) {
+    if (item.code !== '36415') continue;
+    if (!byDate.has(item.date)) byDate.set(item.date, []);
+    byDate.get(item.date).push(item);
+  }
+  for (const [date, group] of byDate) {
+    if (group.length < 2) continue;
+    const unclaimed = group.filter(i => !claimed.has(i.id));
+    if (unclaimed.length < 2) continue;
+    // sort ascending by billed; keep lowest
+    unclaimed.sort((a, b) => a.billed - b.billed);
+    const extras = unclaimed.slice(1);
+    extras.forEach(i => claimed.add(i.id));
+    const overcharge = extras.reduce((s, i) => s + i.patientOwes, 0);
+    findings.push({
+      rule: 'repeated_venipuncture',
+      title: 'Repeated venipuncture charge',
+      severity: 'medium',
+      lines: unclaimed,
+      reason: `Code 36415 (Venipuncture) was billed more than once on ${date}. A single blood draw covers multiple tubes; charging again without clear medical justification is likely an error.`,
+      overcharge,
+      estimated: false
+    });
+  }
+  return findings;
+}
+
+function detectMissingInNetworkAdj(items, claimed, inNetwork) {
+  if (!inNetwork) return [];
+  const findings = [];
+  for (const item of items) {
+    if (claimed.has(item.id)) continue;
+    if (item.billed <= 100) continue;
+    if (item.adjustment > 0) continue;
+    // When the adjustment column couldn't be parsed (PDF lines with <3 amounts),
+    // we can't distinguish "no adjustment" from "adjustment not shown" — skip.
+    if (item.adjustmentUnknown) continue;
+    claimed.add(item.id);
+    const overcharge = item.patientOwes * 0.40;
+    findings.push({
+      rule: 'missing_adj',
+      title: 'Missing in-network adjustment',
+      severity: 'medium',
+      lines: [item],
+      reason: `${codeLabel(item.code, item.description)} shows no contractual adjustment, but in-network providers must apply the negotiated discount. This may mean the insurer hasn't processed it yet or it was billed incorrectly.`,
+      overcharge,
+      estimated: true
+    });
+  }
+  return findings;
+}
+
+const DENIAL_CODES = {
+  'CO-16': {
+    meaning: 'Missing or insufficient information — the claim was rejected because required data (diagnosis code, signature, etc.) was not submitted.',
+    strategy: "Contact your provider's billing office and ask them to resubmit with the missing information. Request the specific field(s) the insurer flagged."
+  },
+  'CO-50': {
+    meaning: "Service not deemed medically necessary — your insurer decided the procedure wasn't required for your diagnosis.",
+    strategy: "Ask your doctor to write a letter of medical necessity explaining why the service was required. Submit a formal appeal with that letter and any supporting clinical notes within your plan's appeal window (usually 180 days)."
+  },
+  'CO-97': {
+    meaning: "Bundled service — this code is included in another procedure already billed, so the insurer won't pay it separately.",
+    strategy: 'Ask the billing office to review whether the services were truly distinct and, if so, to add a modifier (e.g. -59 or -XS) justifying separate billing before resubmitting.'
+  },
+  'CO-197': {
+    meaning: 'No preauthorization — the insurer required advance approval for this service, and none was obtained.',
+    strategy: 'Request a retroactive prior authorization from your insurer, especially if the service was urgent. If denied, file a grievance citing medical necessity and ask your provider to support the appeal.'
+  },
+  'PR-1': {
+    meaning: 'Deductible — this amount applies to your annual deductible, which you are responsible for paying.',
+    strategy: 'Verify the amount against your Explanation of Benefits (EOB). If your deductible has already been met, ask the insurer to reprocess. If not, confirm the amount is correct and that the deductible was applied at the in-network rate.'
+  }
+};
+
+function detectDenialCodes(rawText, claimed) {
+  // Extract "Amount denied: $X" if present
+  const deniedMatch = rawText.match(/amount\s+denied\s*:\s*\$?([\d,]+(?:\.\d{1,2})?)/i);
+  const deniedAmount = deniedMatch ? parseAmount(deniedMatch[1]) : 0;
+
+  const findings = [];
+  for (const [code, info] of Object.entries(DENIAL_CODES)) {
+    if (!rawText.toUpperCase().includes(code)) continue;
+    findings.push({
+      rule: 'denial_' + code,
+      title: `Denial code ${code} found`,
+      severity: code.startsWith('PR') ? 'low' : 'high',
+      lines: [],
+      denialCode: code,
+      reason: info.meaning,
+      strategy: info.strategy,
+      overcharge: deniedAmount,
+      deniedAmount,
+      estimated: false
+    });
+    // Only attach the dollar figure to the first denial code found; zero the rest
+    // so the banner total isn't multiplied across multiple denial codes.
+    deniedAmount && (findings[findings.length - 1]._consumedDenied = true);
+    break; // after attaching amount, let remaining codes add without it
+  }
+  // Second pass: remaining denial codes without the dollar amount
+  for (const [code, info] of Object.entries(DENIAL_CODES)) {
+    if (!rawText.toUpperCase().includes(code)) continue;
+    if (findings.some(f => f.denialCode === code)) continue;
+    findings.push({
+      rule: 'denial_' + code,
+      title: `Denial code ${code} found`,
+      severity: code.startsWith('PR') ? 'low' : 'high',
+      lines: [],
+      denialCode: code,
+      reason: info.meaning,
+      strategy: info.strategy,
+      overcharge: 0,
+      deniedAmount: 0,
+      estimated: false
+    });
+  }
+  return findings;
+}
+
+// ─────────────────────────────────────────────
+// START OVER
+// ─────────────────────────────────────────────
+function startOver(silent) {
+  // Clear input unless called silently (e.g. from loadSample which sets new content immediately)
+  if (!silent) {
+    setTextareaValue('');
+    document.getElementById('pdfStatus').textContent = '';
+    document.getElementById('pdfStatus').className = '';
+  }
+  // Hide results and reset all UI state
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('overchargeBanner').style.display = 'none';
+  document.getElementById('issueCards').innerHTML = '';
+  document.getElementById('outputSection').style.display = 'none';
+  document.getElementById('inputHint').style.display = 'none';
+  document.getElementById('inputHint').textContent = '';
+  document.getElementById('skipNote').style.display = 'none';
+  document.getElementById('skipNote').textContent = '';
+  // Clear personalisation fields
+  ['patientName','accountNumber','providerName','insurerName'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  _lastFindings = [];
+  if (!silent) window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─────────────────────────────────────────────
+// BUTTON STATE DURING ANALYSIS
+// ─────────────────────────────────────────────
+function setAnalyzing(on) {
+  const btn = document.getElementById('findBtn');
+  btn.disabled = on;
+  btn.textContent = on ? 'Checking…' : 'Find errors';
+}
+
+// ─────────────────────────────────────────────
+// MAIN ANALYSIS
+// ─────────────────────────────────────────────
+function runAnalysis() {
+  const raw = document.getElementById('billInput').value.trim();
+  const hint = document.getElementById('inputHint');
+  const skipNote = document.getElementById('skipNote');
+
+  // Clear previous hints
+  hint.style.display = 'none';
+  hint.textContent = '';
+  skipNote.style.display = 'none';
+  skipNote.textContent = '';
+
+  if (!raw) {
+    hint.textContent = 'Paste a bill or try a sample to get started.';
+    hint.style.display = 'inline';
+    return;
+  }
+
+  setAnalyzing(true);
+
+  // Yield to browser so the disabled state renders before sync parsing work
+  setTimeout(() => {
+    const inNetwork = document.getElementById('inNetwork').checked;
+    const { items, rawText, skipped } = parseBill(raw);
+
+    // Show skip note if any rows were unreadable
+    if (skipped > 0) {
+      skipNote.textContent = `Skipped ${skipped} line${skipped !== 1 ? 's' : ''} we couldn't read.`;
+      skipNote.style.display = 'block';
+    }
+
+    const claimed = new Set();
+    const findings = [
+      ...detectDuplicates(items, claimed),
+      ...detectUnbundling(items, claimed),
+      ...detectMultipleEM(items, claimed),
+      ...detectRepeatedVenipuncture(items, claimed),
+      ...detectMissingInNetworkAdj(items, claimed, inNetwork),
+      ...detectDenialCodes(rawText, claimed)
+    ];
+
+    renderResults(findings, items.length === 0 && skipped === 0 && findings.length === 0);
+    setAnalyzing(false);
+  }, 0);
+}
+
+// ─────────────────────────────────────────────
+// RENDERING
+// ─────────────────────────────────────────────
+function fmt(n) {
+  return n.toLocaleString('en-US', { style:'currency', currency:'USD' });
+}
+
+function renderResults(findings, unreadable) {
+  const resultsEl = document.getElementById('results');
+  const banner = document.getElementById('overchargeBanner');
+  const cardsEl = document.getElementById('issueCards');
+  const outputSection = document.getElementById('outputSection');
+
+  resultsEl.style.display = 'block';
+  cardsEl.innerHTML = '';
+
+  const totalOvercharge = findings.reduce((s, f) => s + f.overcharge, 0);
+  const issueCount = findings.length;
+
+  const estNote = document.getElementById('ocEstNote');
+
+  if (issueCount === 0) {
+    banner.className = unreadable ? 'unreadable' : 'clean';
+    banner.style.display = 'block';
+    document.getElementById('cleanTips').style.display = unreadable ? 'none' : 'block';
+    outputSection.style.display = 'none';
+    estNote.style.display = 'none';
+    estNote.textContent = '';
+    if (unreadable) {
+      document.getElementById('ocAmount').textContent = 'Nothing readable found';
+      document.getElementById('ocLabel').textContent =
+        "We couldn't find any billing data or denial codes. Try pasting an itemized bill with columns like date, code, description, billed, adjustment, and patient_owes — or use one of the sample buttons above.";
+    } else {
+      document.getElementById('ocAmount').textContent = '✓ No issues found';
+      document.getElementById('ocLabel').textContent = '';
+    }
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  const hasEstimate = findings.some(f => f.estimated);
+  // If all overcharge comes from denial codes, label it "Amount under appeal"
+  const onlyDenials = findings.every(f => f.rule.startsWith('denial_'));
+  const hasDeniedAmount = findings.some(f => f.deniedAmount > 0);
+  banner.className = '';
+  banner.style.display = 'block';
+  document.getElementById('cleanTips').style.display = 'none';
+  document.getElementById('ocLabel').textContent = onlyDenials && hasDeniedAmount
+    ? `Amount under appeal across ${issueCount} issue${issueCount !== 1 ? 's' : ''}`
+    : `Potential overcharge across ${issueCount} issue${issueCount !== 1 ? 's' : ''}`;
+  if (hasEstimate) {
+    estNote.textContent = '* Includes estimated amounts';
+    estNote.style.display = 'block';
+  } else {
+    estNote.style.display = 'none';
+    estNote.textContent = '';
+  }
+
+  for (const f of findings) {
+    cardsEl.insertAdjacentHTML('beforeend', renderCard(f));
+  }
+
+  // Build outputs
+  renderOutputs(findings);
+  outputSection.style.display = 'block';
+
+  // Scroll first, then animate the total counting up
+  resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  animateTotal(totalOvercharge, hasEstimate);
+}
+
+function animateTotal(target, showAsterisk) {
+  const el = document.getElementById('ocAmount');
+  const duration = 800; // ms
+  const start = performance.now();
+  function tick(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    // ease-out cubic
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = eased * target;
+    el.textContent = fmt(current) + (showAsterisk ? '*' : '');
+    if (progress < 1) requestAnimationFrame(tick);
+    else el.textContent = fmt(target) + (showAsterisk ? '*' : '');
+  }
+  requestAnimationFrame(tick);
+}
+
+function renderCard(f) {
+  const badgeClass = { high: 'badge-high', medium: 'badge-medium', low: 'badge-low' }[f.severity] || 'badge-low';
+  const badgeLabel = f.severity.charAt(0).toUpperCase() + f.severity.slice(1);
+
+  let linesHTML = '';
+  if (f.lines && f.lines.length > 0) {
+    linesHTML = `<div class="card-lines">${
+      f.lines.map(l => `${l.date || 'date not listed'}  ${codeLabel(l.code, l.description)}  →  billed ${fmt(l.billed)}  /  you owe ${fmt(l.patientOwes)}`).join('\n')
+    }</div>`;
+  }
+
+  let amountHTML = '';
+  if (f.overcharge > 0) {
+    const amtLabel = f.deniedAmount > 0 ? 'Amount under appeal: ' :
+                     f.estimated       ? 'Estimated overcharge: ' : 'Overcharge: ';
+    const amtSuffix = f.estimated && !f.deniedAmount ? ' (est.)' : '';
+    amountHTML = `<div class="card-amount">${amtLabel}${fmt(f.overcharge)}${amtSuffix}</div>`;
+  }
+
+  let strategyHTML = '';
+  if (f.strategy) {
+    strategyHTML = `<div class="card-reason" style="margin-top:6px;background:#f0f6ff;padding:7px 10px;border-radius:4px;font-size:0.83rem;"><strong>Appeal strategy:</strong> ${f.strategy}</div>`;
+  }
+
+  return `<div class="card">
+    <div class="card-header">
+      <div class="card-title">${f.title}</div>
+      <span class="badge ${badgeClass}">${badgeLabel}</span>
+    </div>
+    ${linesHTML}
+    <div class="card-reason">${f.reason}</div>
+    ${strategyHTML}
+    ${amountHTML}
+  </div>`;
+}
+
+// ─────────────────────────────────────────────
+// LETTER + SCRIPT GENERATORS
+// ─────────────────────────────────────────────
+function getField(id, placeholder) {
+  const v = document.getElementById(id).value.trim();
+  return v || placeholder;
+}
+
+function generateLetter(findings) {
+  const patient = getField('patientName', '[Your Name]');
+  const account = getField('accountNumber', '[Account Number]');
+  const provider = getField('providerName', '[Provider / Hospital Name]');
+  const insurer = getField('insurerName', '[Insurance Company]');
+  const today = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  const disputeItems = findings.filter(f => f.overcharge > 0 || f.lines?.length > 0 || f.denialCode);
+  const totalAmt = disputeItems.reduce((s, f) => s + f.overcharge, 0);
+  const hasEst = disputeItems.some(f => f.estimated);
+
+  const itemParagraphs = disputeItems.map((f, i) => {
+    let text = `${i + 1}. ${f.title}`;
+    if (f.lines && f.lines.length > 0) {
+      f.lines.forEach(l => {
+        text += `\n   ${l.date || 'date not listed'}  |  ${codeLabel(l.code, l.description)}  |  Billed: ${fmt(l.billed)}  |  My responsibility: ${fmt(l.patientOwes)}`;
+      });
+    }
+    text += `\n   ${f.reason}`;
+    if (f.overcharge > 0) {
+      text += ` I am seeking a credit of ${fmt(f.overcharge)}${f.estimated ? ' (estimated)' : ''} for this item.`;
+    }
+    if (f.strategy) {
+      text += `\n   Requested resolution: ${f.strategy}`;
+    }
+    return text;
+  }).join('\n\n');
+
+  const totalLine = totalAmt > 0
+    ? `In total, I am disputing approximately ${fmt(totalAmt)}${hasEst ? ' (partially estimated)' : ''} in charges.\n\n`
+    : '';
+
+  const hasBillingError = disputeItems.some(f => !f.rule.startsWith('denial_'));
+  const hasDenial       = disputeItems.some(f => f.rule.startsWith('denial_'));
+
+  let escalationParagraph;
+  if (hasBillingError && !hasDenial) {
+    escalationParagraph = `If I do not receive a satisfactory written response within 30 days, I will escalate this matter to ${provider}'s patient advocate office and, if necessary, to my state attorney general's consumer protection office.`;
+  } else if (hasDenial && !hasBillingError) {
+    escalationParagraph = `If I do not receive a satisfactory response within 30 days, I intend to pursue an internal appeal with ${insurer} and, if that is unsuccessful, request an independent external review through my state's Department of Insurance.`;
+  } else {
+    escalationParagraph = `If I do not receive a satisfactory written response within 30 days, I will escalate the billing errors to ${provider}'s patient advocate office and the state attorney general's consumer protection office, and I will pursue an internal appeal with ${insurer} followed by an external review through my state's Department of Insurance for any insurance denials.`;
+  }
+
+  return `${today}
+
+${patient}
+Account Number: ${account}
+
+${provider}
+Billing Department
+
+Re: Formal Billing Dispute — Account ${account}
+
+To Whom It May Concern,
+
+I am writing to dispute specific charges on the above account. I have reviewed my itemized bill carefully and identified ${disputeItems.length} issue${disputeItems.length !== 1 ? 's' : ''} that appear to reflect billing errors or charges not consistent with standard coding guidelines. ${totalLine.trim()}
+
+The specific items in dispute are as follows:
+
+${itemParagraphs}
+
+I am requesting that your billing department:
+
+1. Review each disputed item and provide a written explanation of the basis for each charge.
+2. Issue corrected charges or credits where errors are confirmed.
+3. Provide a fully itemized statement with CPT codes, dates of service, and the contractual adjustment applied to each line.
+4. Respond to this dispute in writing within 30 days of receipt.
+
+I am prepared to pay any amounts that are correctly billed and documented. I will, however, withhold payment on the specific disputed amounts listed above pending resolution. ${escalationParagraph}
+
+I am available by phone or email to discuss this further and can supply supporting documentation, including my Explanation of Benefits, upon request. I am confident this can be resolved without further escalation, and I appreciate your attention to this matter.
+
+Sincerely,
+
+${patient}
+Account: ${account}
+Insurance: ${insurer}`;
+}
+
+function generateScript(findings) {
+  const patient  = getField('patientName', '[Your Name]');
+  const account  = getField('accountNumber', '[Account Number]');
+  const provider = getField('providerName', '[Provider / Hospital Name]');
+  const insurer  = getField('insurerName', '[Insurance Company]');
+
+  const hasBillingError = findings.some(f => !f.rule.startsWith('denial_'));
+  const hasDenial       = findings.some(f => f.rule.startsWith('denial_'));
+
+  const issueSteps = findings.map((f, i) => {
+    const lineRef = f.lines && f.lines.length > 0
+      ? f.lines.map(l => `${l.date || 'date not listed'}, ${codeLabel(l.code, l.description)}, billed ${fmt(l.billed)}`).join('; ')
+      : null;
+
+    let step = `Issue ${i + 1}: ${f.title}\n`;
+
+    if (lineRef) {
+      step += `You: "I'm looking at a charge on ${lineRef}. `;
+    } else {
+      step += `You: "I'm calling about a denial on my account. `;
+    }
+
+    // Build a plain, natural spoken challenge
+    if (f.rule === 'duplicate') {
+      step += `It looks like this code was billed twice for the same date and amount. Can you pull that up and confirm whether both entries are intentional?"\n`;
+    } else if (f.rule === 'unbundling') {
+      step += `I understand that one of these codes is already included in the other — they shouldn't both be billed on the same day. Can you review the coding on this claim?"\n`;
+    } else if (f.rule === 'multiple_em') {
+      step += `Two evaluation and management visits were charged on the same date. My understanding is that only one E/M visit per provider per day is typically allowed. Can you explain the basis for both charges?"\n`;
+    } else if (f.rule === 'repeated_venipuncture') {
+      step += `Venipuncture was billed more than once on the same day. A single blood draw should cover multiple tubes — can you verify this wasn't a duplicate entry?"\n`;
+    } else if (f.rule === 'missing_adj') {
+      step += `My provider is in-network, but I don't see any contractual adjustment on this line. In-network rates should apply — can you confirm this was processed correctly?"\n`;
+    } else if (f.rule.startsWith('denial_')) {
+      step += `I received a denial with reason code ${f.denialCode}. I'd like to understand exactly what information is needed to resolve this and what my options are for appeal."\n`;
+    } else {
+      step += `I'd like to understand the basis for this charge and whether it was coded correctly."\n`;
+    }
+
+    if (f.overcharge > 0 && !f.rule.startsWith('denial_')) {
+      step += `\nIf they confirm the error:\nYou: "Great — what's the process to have the ${fmt(f.overcharge)}${f.estimated ? ' (estimated)' : ''} credited back? Can you note that on my account and send written confirmation?"`;
+    }
+
+    if (f.rule.startsWith('denial_')) {
+      const escalation = `If the call agent can't help, ask for the formal internal appeal process. If that appeal is denied, you have the right to an independent external review through your state's Department of Insurance.`;
+      if (f.strategy) {
+        step += `\n\nIf they say the denial stands:\nYou: "I'd like to file a formal internal appeal. ${f.strategy} Can you send me the appeal form and instructions in writing?" ${escalation}`;
+      } else {
+        step += `\n\nIf they say the denial stands:\nYou: "I'd like to file a formal internal appeal. Can you send me the form and the deadline?" ${escalation}`;
+      }
+    } else if (f.strategy) {
+      step += `\n\nIf they say the charges are correct:\nYou: "I'd like to formally dispute this. ${f.strategy} Can you transfer me to your billing review department, or let me know the address to send a written dispute? If this isn't resolved I'll be escalating to the patient advocate office and the state attorney general's consumer protection office."`;
+    } else {
+      step += `\n\nIf they say the charges are correct:\nYou: "I'd like to note my disagreement and file a formal dispute. I'll be escalating to the patient advocate office and, if needed, to the state attorney general's consumer protection office. Can you give me the address for written disputes?"`;
+    }
+
+    return step;
+  }).join('\n\n─────────────────────────────────────\n\n');
+
+  return `PHONE SCRIPT — BILLING DISPUTE
+Account: ${account}  |  Provider: ${provider}
+
+Before the call: find your bill, your EOB from your insurer, and this list of issues. Call the billing department number printed on your statement.
+
+═══════════════════════════════════════
+OPENING
+═══════════════════════════════════════
+When someone answers:
+You: "Hi, my name is ${patient}. I'm calling about account number ${account}. I've reviewed my bill and found what look like billing errors. Can you connect me with someone in the billing dispute department?"
+
+Once connected, immediately get:
+  Rep's name: _____________________
+  Date and time: __________________
+  Reference / call ID: _____________
+Keep these — you'll need them if the dispute continues.
+
+═══════════════════════════════════════
+EACH ISSUE
+═══════════════════════════════════════
+${issueSteps}
+
+═══════════════════════════════════════
+CLOSING
+═══════════════════════════════════════
+Before hanging up:
+You: "Can you send me written confirmation of anything that was adjusted today?"
+You: "What's the expected timeline for resolving the items still under review?"
+You: "Is there a formal dispute form I should submit, and where do I send it?"
+
+If nothing is resolved on the call:
+You: "I understand you may not be able to resolve this today. I've already sent a formal dispute letter, and I'll be following up. Can you make a note of this call on my account, and give me the name of the billing supervisor I should address correspondence to?"
+
+End of call — update your notes with what was promised and by when.
+${hasBillingError ? `\nIf billing errors remain unresolved after 30 days:\n→ Contact ${provider}'s patient advocate office.\n→ File a complaint with your state attorney general's consumer protection office.` : ''}${hasDenial ? `\nIf insurance denial(s) remain unresolved:\n→ File a formal internal appeal with ${insurer} (typically within 180 days of the denial).\n→ If the internal appeal fails, request an independent external review through your state's Department of Insurance.` : ''}`;
+}
+
+function renderOutputs(findings) {
+  _lastFindings = findings;
+  document.getElementById('letterText').textContent = generateLetter(findings);
+  document.getElementById('scriptText').textContent = generateScript(findings);
+}
+
+function liveRefreshOutputs() {
+  if (!_lastFindings.length) return;
+  document.getElementById('letterText').textContent = generateLetter(_lastFindings);
+  document.getElementById('scriptText').textContent = generateScript(_lastFindings);
+}
+
+// ─────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+}
+
+// ─────────────────────────────────────────────
+// COPY + PRINT
+// ─────────────────────────────────────────────
+function copyOutput(textId, btnId) {
+  const text = document.getElementById(textId).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById(btnId);
+    const orig = btn.textContent;
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+}
+
+function printOutput(textId) {
+  // The @media print CSS hides all chrome and shows only the active output-text.
+  // Make sure the requested panel is active before printing.
+  const panel = document.getElementById(textId)?.closest('.tab-panel');
+  if (panel && !panel.classList.contains('active')) {
+    const tab = panel.id === 'tabLetter' ? 'letter' : 'script';
+    const tabBtn = document.querySelector(`.tab-btn[onclick*="${tab}"]`);
+    if (tabBtn) switchTab(tab, tabBtn);
+  }
+  window.print();
+}
+</script>
+</body>
+</html>
